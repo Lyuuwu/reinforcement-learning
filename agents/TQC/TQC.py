@@ -56,17 +56,9 @@ class TQC(BaseAgent):
     def act(self, obs):
         return self.actor.act(obs)
     
-    def set_train(self):
-        self.actor.train()
-        for critic in self.critics:
-            critic.train()
-            
-    def set_eval(self):
-        self.actor.eval()
-        for critic in self.critics:
-            critic.eval()
-    
-    def train(self, batch):
+    def update(self, batch) -> dict:
+        metrics = {}
+        
         # --- Critic Loss ---
         with torch.no_grad():
             next_actions, log_probs = self.sample(batch['next_obs'])
@@ -75,10 +67,11 @@ class TQC(BaseAgent):
             ema_atoms_flat, _ = ema_atoms.flatten(1).sort(dim=-1)   # (B, NM)
             ema_atoms_truncated = ema_atoms_flat[..., :self.k * self.N]   # (B, kN)
             
-            y = batch['reward'] + self.gamma * (ema_atoms_truncated - self.alpha * log_probs.unsqueeze(-1))
+            y = batch['reward'] + self.gamma * (ema_atoms_truncated - self.alpha * log_probs.unsqueeze(-1)) * batch['not_done']
 
         atoms = self._get_atoms(batch['obs'], batch['action'], self.critics)    # (B, NM)
         critic_loss = self._critic_loss(y, atoms).mean()
+        metrics['critics/loss'] = critic_loss
         
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -92,6 +85,7 @@ class TQC(BaseAgent):
         actions, log_probs = self.sample(batch['obs'])
         atoms = self._get_atoms(batch['obs'], actions, self.critics)
         policy_loss = self._policy_loss(log_probs, atoms)
+        metrics['policy/loss'] = policy_loss
         
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
@@ -99,12 +93,15 @@ class TQC(BaseAgent):
         
         # --- alpha ---
         alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
+        metrics['alpha/loss'] = alpha_loss
         
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
         
         self.alpha = self.log_alpha.exp().item()
+        
+        return metrics
 
     def _critic_loss(self, y: torch.Tensor, atoms: torch.Tensor) -> torch.Tensor:
         '''
@@ -134,7 +131,7 @@ class TQC(BaseAgent):
         return (self.alpha * log_probs - atoms.mean(dim=(-2, -1))).mean()
 
     def _get_atoms(self, obs, act, critics) -> torch.Tensor:
-        tensors = [critic(obs, act) for critic in critics]  # (N, B, M)
+        tensors = [critic(obs, act) for critic in critics]  # List 長度為 N, 每個元素 (B, M)
         return torch.stack(tensors, dim=1)  # (B, N, M)
         
     def _quantile_huber_loss(self, tau: torch.Tensor, u: torch.Tensor) -> torch.Tensor:

@@ -2,6 +2,8 @@ import copy
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 
+import torch
+import torch.nn as nn
 @dataclass
 class BaseConfig:
     def to_dict(self) -> dict:
@@ -18,18 +20,21 @@ class BaseConfig:
             setattr(c, k, v)
         return c
     
-class BaseAgent:
+class BaseAgent(nn.Module, ABC):
     @abstractmethod
-    def sample(self, obs): ...
+    def sample(self, obs):
+        ''' stochastic for train '''
     
     @abstractmethod
-    def act(self, obs): ...
+    def act(self, obs):
+        ''' deterministic for eval '''
     
     @abstractmethod
-    def set_train(self): ...
+    def update(self, batch) -> dict:
+        ''' one gradient step '''
     
-    @abstractmethod
-    def set_eval(self): ...
+    def save(self, path: str):
+        torch.save(self.state_dict(), path)
     
-    @abstractmethod
-    def train(self, batch): ...
+    def load(self, path: str, map_location=None):
+        self.load_state_dict(torch.load(path, map_location=map_location))

@@ -1,5 +1,5 @@
 .vscode/
-cilab.egg-info/
+cilab_RL.egg-info/
 __pycache__/
 
 tests/

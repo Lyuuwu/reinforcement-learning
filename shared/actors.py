@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-LOG_STD_MIN = torch.tensor(-5, dtype=torch.float32) # SAC 原始是 -20
-LOG_STD_MAX = torch.tensor(2, dtype=torch.float32)
+LOG_STD_MIN = -5 # SAC 原始是 -20
+LOG_STD_MAX = 2
 
 class GaussianActor(nn.Module):
-    def __init__(self, obs_dim: int, act_dim: int, max_action: int):
+    def __init__(self, obs_dim: int, act_dim: int, max_action: float):
         super().__init__()
         
         self.act_dim = act_dim
@@ -55,7 +55,7 @@ class GaussianActor(nn.Module):
         
         # Jacobian Correction
         log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1) # (B, D) -> (B, )
-        log_prob -= action.shape[-1] * torch.log(torch.tensor(self.max_action))
+        log_prob -= action.shape[-1] * torch.log(self.max_action)
         
         return self.max_action * action, log_prob
     

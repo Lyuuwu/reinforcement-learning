@@ -16,9 +16,9 @@ class Critic(nn.Module):
         super().__init__()
         
         self.head = nn.Sequential(
-            MLPHead(obs_dim + act_dim, 512),
-            MLPHead(512, 512),
-            nn.Linear(512, atom_num)
+            MLPHead(obs_dim + act_dim, hidden),
+            MLPHead(hidden, hidden),
+            nn.Linear(hidden, atom_num)
         )
         
     def forward(self, obs, act):
