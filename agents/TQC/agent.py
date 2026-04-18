@@ -4,13 +4,13 @@ from typing import List
 import torch
 import torch.nn.functional as F
 
-from shared.base import BaseAgent
+from shared.base import AgentBase
 from .config import TQCConfig
-from .Critic import Critic
+from .critic import Critic
 from shared.actors import GaussianActor
 from shared.ema import EMA
 
-class TQC(BaseAgent):
+class TQC(AgentBase):
     def __init__(
         self,
         actor: GaussianActor,
@@ -137,3 +137,5 @@ class TQC(BaseAgent):
     def _quantile_huber_loss(self, tau: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         huber = F.huber_loss(u, torch.zeros_like(u), reduction='none', delta=1.0)
         return (tau - (u<0).float()).abs() * huber
+    
+print('Hello')

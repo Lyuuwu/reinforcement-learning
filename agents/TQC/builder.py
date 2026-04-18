@@ -1,7 +1,7 @@
 from shared.actors import GaussianActor
-from .Critic import Critic
+from .critic import Critic
 
-from .TQC import TQC
+from .agent import TQC
 from .config import TQCConfig
 
 def build(obs_dim: int, act_dim: int, max_act: float, config: TQCConfig):

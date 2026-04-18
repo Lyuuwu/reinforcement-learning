@@ -20,7 +20,7 @@ class BaseConfig:
             setattr(c, k, v)
         return c
     
-class BaseAgent(nn.Module, ABC):
+class AgentBase(nn.Module, ABC):
     @abstractmethod
     def sample(self, obs):
         ''' stochastic for train '''
