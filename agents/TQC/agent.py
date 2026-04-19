@@ -2,6 +2,7 @@ import itertools
 from typing import List
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from shared.base import AgentBase
@@ -21,11 +22,11 @@ class TQC(AgentBase):
         
         # --- models ---
         self.actor = actor
-        self.critics = critics
-        self.ema_critics = [EMA(critic, config.beta) for critic in critics]
+        self.critics = nn.ModuleList(critics)
+        self.ema_critics = nn.ModuleList([EMA(critic, config.beta) for critic in critics])
         
         # --- alpha ---
-        self.log_alpha = torch.zeros(1, requires_grad=True, device=config.device)
+        self.log_alpha = nn.Parameter(torch.zeros(1))
         self.alpha = self.log_alpha.exp().item()
         self.target_entropy = -self.actor.act_dim
         
@@ -42,11 +43,13 @@ class TQC(AgentBase):
         self.M = config.atom_num
         self.k = self.M - config.discard
         self.gamma = config.gamma
-        self.tau = torch.tensor(
-            [(2 * m - 1) / (2 * self.M) for m in range(1, self.M + 1)],
-            dtype=torch.float32,
-            device=config.device
-        ).view(1, -1, 1)
+        self.register_buffer(
+            'tau',
+            torch.tensor(
+                [(2 * m - 1) / (2 * self.M) for m in range(1, self.M + 1)],
+                dtype=torch.float32
+            ).view(1, -1, 1)
+        )
 
     def sample(self, obs):
         ''' return action (B, act_dim) , log_prob (B, ) '''
@@ -137,5 +140,3 @@ class TQC(AgentBase):
     def _quantile_huber_loss(self, tau: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         huber = F.huber_loss(u, torch.zeros_like(u), reduction='none', delta=1.0)
         return (tau - (u<0).float()).abs() * huber
-    
-print('Hello')

@@ -1,8 +1,13 @@
 import argparse
-
+import importlib
 import torch
 
 from agents import build_agent
+from envs import EnvConfig, make_vec_env, make_env
+from shared.train_base import TrainerConfig
+from shared.train_off_policy import OffPolicyTrainer
+from shared.buffers import ReplayBuffer
+from shared.logger import JSONLLogger
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description='Reinforcement Learning Projct')
@@ -16,16 +21,20 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--config', type=str, default='default',
                    help='experiment config')
     
-    p.add_argument('--train_type', type=str, default='interleaved',
+    p.add_argument('--train_type', type=str, default='off_policy',
                    help='select training procedure')
     
     p.add_argument('--seed', type=int, default=0)
     
+    p.add_argument('--num_envs', type=int, default=1)
+    
     p.add_argument('--device', type=str, default='auto',
                    help='"auto", "cpu", "cuda", "cuda:0"')
     
-    p.add_argument('--save', type=str, default='auto',
+    p.add_argument('--resume', type=str, default='auto',
                    help='Path to checkpoint .pt file')
+    
+    p.add_argument('--save_dir', default='runs/default')
     
     return p.parse_args()
 
@@ -37,8 +46,81 @@ def resolve_device(device_str: str) -> torch.device:
 def get_trainer_class(trainer_type: str):
     raise NotImplementedError
 
-def compose(agent_cfg, env_cfg) -> dict:
-    raise NotImplementedError
+def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
+    # --- build env ---
+    vec_env = make_vec_env(args.task, args.num_envs, env_cfg)
+    eval_env = make_env(args.task, env_cfg)
+    obs_dim = vec_env.single_observation_space.shape[0]
+    act_dim = vec_env.single_action_space.shape[0]
+    max_act = float(vec_env.single_action_space.high[0])
+    
+    # --- build agent ---
+    agent = build_agent(args.agent, obs_dim, act_dim, max_act,
+                        agent_cfg, device=device)
+    
+    # --- build buffer ---
+    if args.train_type == 'off_policy':
+        buffer = ReplayBuffer(
+            obs_dim, act_dim,
+            capacity=1_000_000, device=device
+        )
+    else:
+        raise NotImplementedError
+    
+    # --- build logger ---
+    logger = JSONLLogger(trainer_cfg.save_dir, args)
+    logger.save_config({
+        'agent_cfg': agent_cfg.to_dict(),
+        'env_cfg': env_cfg.__dict__,
+        'trainer_cfg': trainer_cfg.to_dict()
+    })
+    
+    # --- build trainer ---
+    if args.train_type == 'off_policy':
+        trainer = OffPolicyTrainer(
+            agent=agent, vec_env=vec_env, eval_env=eval_env,
+            logger=logger, config=trainer_cfg, device=device,
+            buffer=buffer
+        )
+        
+    return {
+        'trainer': trainer,
+        'agent': agent,
+        'vec_env': vec_env,
+        'eval_env': eval_env,
+        'buffer': buffer,
+        'logger': logger
+    }
+
+def main():
+    args = parse_args()
+    device = resolve_device(args.device)
+
+    # --- 各自的 config ---
+    agent_cfg_mod = importlib.import_module(f'agents.{args.agent}.config')
+    agent_cfg = agent_cfg_mod.default()
+    env_cfg = EnvConfig(seed=args.seed)
+    trainer_cfg = TrainerConfig(seed=args.seed, resume=None,
+                                save_dir=args.save_dir)
+    
+    # --- compose ---
+    components = compose(args, agent_cfg, env_cfg, trainer_cfg, device)
+    
+    print('=' * 60)
+    print(f'   Agent:   {args.agent}')
+    print(f'   Task:    {args.task}')
+    print(f'   Seed:    {args.seed}')
+    print(f'   Device:  {device}')
+    print('=' * 60)
+    
+    try:
+        components['trainer'].run()
+    except KeyboardInterrupt:
+        print('\n[Interrupted]')
+        components['trainer'].save_checkpoint(tag='interrupted')
+    finally:
+        components['vec_env'].close()
+        components['eval_env'].close()
 
 if __name__ == '__main__':
-    args = argparse()
+    main()

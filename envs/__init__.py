@@ -57,7 +57,11 @@ def parse_task(task: str) ->tuple[str, str]:
 
 class BaseBuilder(ABC):
     def build(self, task_name: str, cfg: EnvConfig) -> gym.Env:
-        pass
+        env = self._make_base(task_name, cfg)
+        env = self._apply_domain_wrappers(env, cfg)
+        env = self._apply_universal_wrappers(env, cfg)
+        self._seed(env, cfg.seed)
+        return env
     
     @abstractmethod
     def _make_base(self, task_name: str, cfg: EnvConfig) -> gym.Env: ...
@@ -83,7 +87,7 @@ class BaseBuilder(ABC):
         
         return env
     
-    @abstractmethod
+    @staticmethod
     def _seed(env: gym.Env, seed: int | None) -> None:
         if seed is not None:
             env.action_space.seed(seed)
@@ -103,7 +107,7 @@ class ActionRepeat(gym.Wrapper):
         info = {}
         
         for _ in range(self.n):
-            obs, r, term, trun, info = self.env.step()
+            obs, r, term, trun, info = self.env.step(action)
             total_r += r
             if term or trun:
                 break

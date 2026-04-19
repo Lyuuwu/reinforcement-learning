@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
@@ -13,7 +15,9 @@ class GaussianActor(nn.Module):
         
         self.backbone = nn.Sequential(
             nn.Linear(obs_dim, 256),
-            nn.Linear(256, 256)
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU()
         )
         
         self.mean_head = nn.Linear(256, act_dim)
@@ -55,7 +59,7 @@ class GaussianActor(nn.Module):
         
         # Jacobian Correction
         log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1) # (B, D) -> (B, )
-        log_prob -= action.shape[-1] * torch.log(self.max_action)
+        log_prob -= action.shape[-1] * math.log(self.max_action)
         
         return self.max_action * action, log_prob
     

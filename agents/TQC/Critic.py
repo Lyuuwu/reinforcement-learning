@@ -7,7 +7,7 @@ class Critic(nn.Module):
     '''
     ref: TQC page 5.
     
-    For all MuJoCo experiments,
+    For all MuJoCo experiments, 
     we use N = 5 critic networks with three hidden layers of 512 neurons each,
     M = 25 atoms, and the best number of dropped atoms per network d ∈ [0..5], if not stated otherwise.
     '''

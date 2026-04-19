@@ -15,7 +15,7 @@ class JSONLLogger:
         self._log_dir.mkdir(parents=True, exist_ok=True)
         
         t = datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
-        file_name_prefix = f'[{args.agent}][{args.task}][{args.seed}][{t}][Logger][{"".join(random.choice(string.ascii_uppercase, k=6))}]'
+        file_name_prefix = f'[{args.agent}][{args.task.replace(':', '_')}][{args.seed}][{t}][Logger][{"".join(random.choices(string.ascii_uppercase, k=6))}]'
         
         json_log_name = file_name_prefix + '.json'
         jsonl_log_name = file_name_prefix + 'metrics.jsonl'
@@ -66,9 +66,8 @@ class JSONLLogger:
             s = _to_scalar(v)
             if s is not None:
                 parts.append(f'{k}={s:.4f}' if isinstance(s, float) else f'{k}={s}')
-        print('==================================================')
+        print('=' * 60)
         print(' | '.join(parts))
-        print('==================================================')
 
     def eval_log(self, step: int, score: float):
         self.steps.append(step)

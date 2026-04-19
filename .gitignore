@@ -2,4 +2,5 @@
 cilab_RL.egg-info/
 __pycache__/
 
+runs/
 tests/
