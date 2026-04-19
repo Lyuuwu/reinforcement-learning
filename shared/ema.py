@@ -13,7 +13,7 @@ class EMA(nn.Module):
     @torch.no_grad()
     def update(self, model: nn.Module):
         for param, ema_param in zip(model.parameters(), self.ema_model.parameters()):
-            ema_param.lerp_(param, 1 - self.beta)
+            ema_param.lerp_(param, self.beta)
             
     def forward(self, *args, **kwargs):
         return self.ema_model(*args, **kwargs)
