@@ -18,6 +18,7 @@ class Critic(nn.Module):
         self.head = nn.Sequential(
             MLPHead(obs_dim + act_dim, hidden),
             MLPHead(hidden, hidden),
+            MLPHead(hidden, hidden),
             nn.Linear(hidden, atom_num)
         )
         

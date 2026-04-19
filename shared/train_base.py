@@ -27,7 +27,7 @@ class TrainerConfig(BaseConfig):
     # --- eval / log / save ---
     eval_interval: int = 10_000
     eval_episodes: int = 10
-    log_interval: int = 1000
+    log_interval: int = 5000
     save_interval: int = 100_000
 
     # --- misc ---

@@ -8,8 +8,8 @@ class TQCConfig(BaseConfig):
     gamma: float = 0.99
     critic_num: int = 5
     atom_num: int = 25
-    critic_hidden: int = 256
-    discard: int = 5
+    critic_hidden: int = 512
+    discard: int = 0
     
     # --- learning rate ---
     actor_lr: float = 3e-4
