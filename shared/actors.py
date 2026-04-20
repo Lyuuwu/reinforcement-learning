@@ -6,7 +6,7 @@ from torch.distributions import Normal
 
 from .mlp import MLPHead
 
-LOG_STD_MIN = -5 # SAC 原始是 -20
+LOG_STD_MIN = -20
 LOG_STD_MAX = 2
 
 class GaussianActor(nn.Module):
@@ -32,12 +32,12 @@ class GaussianActor(nn.Module):
         # ref1: https://docs.cleanrl.dev/rl-algorithms/sac/#implementation-details
         # ref2: https://github.com/denisyarats/pytorch_sac/blob/master/agent/actor.py
         # 參考 CLEANRL 與 SAC 第三方 (star 數量約原始 SAC 的一半)
-        log_std = self.log_std_head(feat)
-        log_std = torch.tanh(log_std)
-        log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)
+        # log_std = self.log_std_head(feat)
+        # log_std = torch.tanh(log_std)
+        # log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)
         
         # 原始SAC:
-        # log_std = self.log_std_head(feat).clamp(LOG_STD_MIN, LOG_STD_MAX)
+        log_std = self.log_std_head(feat).clamp(LOG_STD_MIN, LOG_STD_MAX)
     
         std = log_std.exp()
         
