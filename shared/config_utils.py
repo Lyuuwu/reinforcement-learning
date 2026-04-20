@@ -1,5 +1,5 @@
 import ast
-from dataclasses import field
+from dataclasses import fields
 
 from .base import BaseConfig
 
@@ -23,7 +23,7 @@ def apply_overrides(config: BaseConfig, overrides: dict):
     if not overrides:
         return config
     
-    valid_keys = {f.name for f in field(config)}
+    valid_keys = {f.name for f in fields(config)}
     unknown = set(overrides) - valid_keys
     if unknown:
         raise ValueError(f'{type(config).__name__} does not include: {unknown}')
