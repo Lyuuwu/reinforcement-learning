@@ -2,7 +2,7 @@
 
 ## usage
 
-> python --agent <agent_name> --task <{domain_name}:{task_name}>
+> python train.py --agent <agent_name> --task <{domain_name}:{task_name}>
 
 ### format
 
