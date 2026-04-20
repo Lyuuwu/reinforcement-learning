@@ -15,6 +15,3 @@ class TQCConfig(BaseConfig):
     actor_lr: float = 3e-4
     critic_lr: float = 3e-4
     alpha_lr: float = 3e-4
-
-def default():
-    return TQCConfig()

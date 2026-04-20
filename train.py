@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--task', type=str, required=True,
                    help='Task name (e.g. mujoco_ant, control_cheetah_run)')
     
-    p.add_argument('--config', type=str, default='default',
+    p.add_argument('--config', type=str, default=None,
                    help='experiment config')
     
     p.add_argument('--train_type', type=str, default='off_policy',
@@ -31,10 +31,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--device', type=str, default='auto',
                    help='"auto", "cpu", "cuda", "cuda:0"')
     
-    p.add_argument('--resume', type=str, default='auto',
+    p.add_argument('--save_dir', default='runs/default')
+    
+    p.add_argument('--resume', type=str, default=None,
                    help='Path to checkpoint .pt file')
     
-    p.add_argument('--save_dir', default='runs/default')
+    p.add_argument('--agent-override',   nargs='*', default=[], dest='agent_ov')
+    p.add_argument('--env-override',     nargs='*', default=[], dest='env_ov')
+    p.add_argument('--trainer-override', nargs='*', default=[], dest='trainer_ov')
     
     return p.parse_args()
 
@@ -45,6 +49,30 @@ def resolve_device(device_str: str) -> torch.device:
 
 def get_trainer_class(trainer_type: str):
     raise NotImplementedError
+
+def build_configs(args):
+    from experiments import load_experiment
+    from shared.config_utils import apply_overrides, parse_cli_kv
+    
+    # --- dataclass default ---
+    agent_mod   = importlib.import_module(f'agents.{args.agent}')
+    agent_cfg   = agent_mod.Config()
+    env_cfg     = EnvConfig(seed=args.seed)
+    trainer_cfg = TrainerConfig(seed=args.seed, save_dir=args.save_dir)
+    
+    # --- experiments setting ---
+    if args.config:
+        exp = load_experiment(args.config)
+        agent_cfg   = exp.get('agent', agent_cfg)
+        env_cfg     = exp.get('env', env_cfg)
+        trainer_cfg = exp.get('trainer', trainer_cfg)
+    
+    # --- CLI override ---
+    agent_cfg   = apply_overrides(agent_cfg, parse_cli_kv(args.agent_ov))
+    env_cfg     = apply_overrides(env_cfg, parse_cli_kv(args.env_ov))
+    trainer_cfg = apply_overrides(trainer_cfg, parse_cli_kv(args.trainer_ov))
+    
+    return agent_cfg, env_cfg, trainer_cfg
 
 def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     # --- build env ---
@@ -93,15 +121,12 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     }
 
 def main():
+    # --- parse args ---
     args = parse_args()
     device = resolve_device(args.device)
 
-    # --- 各自的 config ---
-    agent_cfg_mod = importlib.import_module(f'agents.{args.agent}.config')
-    agent_cfg = agent_cfg_mod.default()
-    env_cfg = EnvConfig(seed=args.seed)
-    trainer_cfg = TrainerConfig(seed=args.seed, resume=None,
-                                save_dir=args.save_dir)
+    # --- build configs ---
+    agent_cfg, env_cfg, trainer_cfg = build_configs(args)
     
     # --- compose ---
     components = compose(args, agent_cfg, env_cfg, trainer_cfg, device)
