@@ -7,7 +7,7 @@
 ### format
 
 - agent: agents 底下資料夾的名稱，一定要相同
-- task: `{domain_name}:{task_name}` 如: `mujoco:Ant` 或是 `dm_conrol:HalfCheetah-run`
+- task: `{domain_name}:{task_name}` 如: `mujoco:Ant` 或是 `dm_conrol:cheetah-run` (注意大小寫)
 
 ### optional flags
 
