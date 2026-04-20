@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
+from .mlp import MLPHead
+
 LOG_STD_MIN = -5 # SAC 原始是 -20
 LOG_STD_MAX = 2
 
@@ -14,10 +16,8 @@ class GaussianActor(nn.Module):
         self.act_dim = act_dim
         
         self.backbone = nn.Sequential(
-            nn.Linear(obs_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU()
+            MLPHead(obs_dim, 256),
+            MLPHead(256, 256)
         )
         
         self.mean_head = nn.Linear(256, act_dim)
