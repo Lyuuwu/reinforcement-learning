@@ -41,7 +41,7 @@ class TQC(AgentBase):
         # --- scales ---
         self.N = config.critic_num
         self.M = config.atom_num
-        self.k = self.M - config.discard
+        self.k = self.M - config.dropped
         self.gamma = config.gamma
         self.register_buffer(
             'tau',
@@ -61,6 +61,28 @@ class TQC(AgentBase):
     
     def update(self, batch) -> dict:
         metrics = {}
+
+        # --- Policy Select Action ---
+        actions, log_probs = self.sample(batch['obs'])
+        
+        # --- alpha ---
+        alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
+        metrics['alpha/loss'] = alpha_loss
+        
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+        
+        self.alpha = self.log_alpha.exp().item()
+
+        # --- Policy Loss ---
+        atoms = self._get_atoms(batch['obs'], actions, self.critics)
+        policy_loss = self._policy_loss(log_probs, atoms)
+        metrics['policy/loss'] = policy_loss
+        
+        self.actor_optimizer.zero_grad()
+        policy_loss.backward()
+        self.actor_optimizer.step()
         
         # --- Critic Loss ---
         with torch.no_grad():
@@ -83,26 +105,6 @@ class TQC(AgentBase):
         # --- Target Network ---
         for critic, ema_critic in zip(self.critics, self.ema_critics):
             ema_critic.update(critic)
-        
-        # --- Policy Loss ---
-        actions, log_probs = self.sample(batch['obs'])
-        atoms = self._get_atoms(batch['obs'], actions, self.critics)
-        policy_loss = self._policy_loss(log_probs, atoms)
-        metrics['policy/loss'] = policy_loss
-        
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward()
-        self.actor_optimizer.step()
-        
-        # --- alpha ---
-        alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
-        metrics['alpha/loss'] = alpha_loss
-        
-        self.alpha_optimizer.zero_grad()
-        alpha_loss.backward()
-        self.alpha_optimizer.step()
-        
-        self.alpha = self.log_alpha.exp().item()
         
         return metrics
 

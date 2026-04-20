@@ -9,7 +9,7 @@ class TQCConfig(BaseConfig):
     critic_num: int = 5
     atom_num: int = 25
     critic_hidden: int = 512
-    discard: int = 0
+    dropped: int = 0
     
     # --- learning rate ---
     actor_lr: float = 3e-4

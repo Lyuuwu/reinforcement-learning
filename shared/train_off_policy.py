@@ -78,6 +78,7 @@ class OffPolicyTrainer(TrainerBase):
                 self.buffer.push(obs[i], action[i], r[i], next_obs[i], bool(term[i]))
             
             collected += self.num_envs
+            obs = next_obs
             self.global_env_step += self.num_envs
                 
         print(f'[Prefill] Done. Buffer has {len(self.buffer)} steps')
