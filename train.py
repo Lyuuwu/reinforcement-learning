@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--save_dir', default='runs/default')
     
     p.add_argument('--resume', type=str, default=None,
-                   help='Path to checkpoint .pt file')
+                   help='Path to checkpoint .pt file, "auto" or path')
     
     p.add_argument('--agent-override',   nargs='*', default=[], dest='agent_ov')
     p.add_argument('--env-override',     nargs='*', default=[], dest='env_ov')
@@ -46,9 +46,6 @@ def resolve_device(device_str: str) -> torch.device:
     if device_str == 'auto':
         return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     return torch.device(device_str)
-
-def get_trainer_class(trainer_type: str):
-    raise NotImplementedError
 
 def build_configs(args):
     from experiments import load_experiment
@@ -110,6 +107,8 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
             logger=logger, config=trainer_cfg, device=device,
             buffer=buffer
         )
+    else:
+        raise NotImplementedError
         
     return {
         'trainer': trainer,
@@ -131,18 +130,20 @@ def main():
     # --- compose ---
     components = compose(args, agent_cfg, env_cfg, trainer_cfg, device)
     
+    param_count = sum(p.numel() for p in components['trainer'].agent.parameters())
     print('=' * 60)
     print(f'   Agent:   {args.agent}')
     print(f'   Task:    {args.task}')
     print(f'   Seed:    {args.seed}')
     print(f'   Device:  {device}')
+    print(f'   Params:  {param_count}')
     print('=' * 60)
     
     try:
         components['trainer'].run()
     except KeyboardInterrupt:
         print('\n[Interrupted]')
-        components['trainer'].save_checkpoint(tag='interrupted')
+        components['trainer']._save_checkpoint(tag='interrupted')
     finally:
         components['vec_env'].close()
         components['eval_env'].close()

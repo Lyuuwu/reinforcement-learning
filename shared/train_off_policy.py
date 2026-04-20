@@ -27,7 +27,6 @@ class OffPolicyTrainer(TrainerBase):
                 action = action.cpu().numpy()
 
             next_obs, r, term, trun, _ = self.vec_env.step(action)
-            done = np.logical_or(term, trun)
 
             for i in range(self.num_envs):
                 self.buffer.push(obs[i], action[i], r[i], next_obs[i], bool(term[i]))
@@ -38,12 +37,10 @@ class OffPolicyTrainer(TrainerBase):
             # --- 更新參數 ---
             if len(self.buffer) >= self.batch_size:
                 for _ in range(self.updates_per_step):
-                    batch = self.buffer.sample(self.batch_size)
-                    metrics = self.agent.update(batch)
+                    metrics = self.agent.update(self.buffer.sample(self.batch_size))
                     self.global_update_step += 1
 
                 if self.global_env_step % cfg.log_interval < self.num_envs:
-                    metrics.update({'reward': r})
                     self.logger.log_print(metrics, step=self.global_env_step,
                                           prefix='train')
 
@@ -53,22 +50,23 @@ class OffPolicyTrainer(TrainerBase):
                 self.logger.log_print(m, step=self.global_env_step, prefix='eval')
 
             if self.global_env_step % cfg.save_interval < self.num_envs:
-                self.save_checkpoint(tag='latest', include_buffer=False)
+                self._save_checkpoint(tag='latest', include_buffer=False)
 
     def _prefill(self):
         cfg = self.config
-        if self.global_env_step >= cfg.warmup_steps:
-            print(f'[Prefill] Buffer already has {len(self.buffer)} steps',
-                  f'skipping')
-            return
-        
-        target = cfg.warmup_steps - self.global_env_step
-        print(f'[Prefill] Collecting {target} random steps ...')
-        
+        need = max(cfg.warmup_steps - self.global_env_step, 0)
         obs, _ = self.vec_env.reset()
-        collected = 0
         
-        while collected < target:
+        if need == 0:
+            print(f'[Prefill] warmup already satisfied (step={self.global_env_step})',
+                  f'skipping ...')
+            return obs
+        
+        print(f'[Prefill] collecting {need} random steps ...')
+        
+
+        collected = 0
+        while collected < need:
             action = self.vec_env.action_space.sample()
             
             next_obs, r, term, trun, _ = self.vec_env.step(action)
@@ -82,7 +80,8 @@ class OffPolicyTrainer(TrainerBase):
             self.global_env_step += self.num_envs
                 
         print(f'[Prefill] Done. Buffer has {len(self.buffer)} steps')
-        return next_obs
+        
+        return obs
     
     # --- buffer / optimizer 的 hook ---
     def _get_optim_state(self) -> dict:
