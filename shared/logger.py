@@ -10,27 +10,23 @@ import numpy as np
 import torch
 
 class JSONLLogger:
-    def __init__(self, log_dir: str | Path, args):
-        self._log_dir = Path(log_dir)
-        self._log_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, run_dir: str | Path, agent: str, task: str, seed: int):
+        self._run_dir = Path(run_dir)
+        self._run_dir.mkdir(parents=True, exist_ok=True)
         
         t = datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
-        file_name_prefix = f'[{args.agent}][{args.task.replace(':', '_')}][{args.seed}][{t}][Logger][{"".join(random.choices(string.ascii_uppercase, k=6))}]'
+        uid = ''.join(random.choices(string.ascii_uppercase, k=6))
+        self.run_tag = f'[{agent}][{task}][{seed}][{t}][Logger][{uid}]'
         
-        json_log_name = file_name_prefix + '.json'
-        jsonl_log_name = file_name_prefix + 'metrics.jsonl'
-        
-        self._json_log_path = self._log_dir / json_log_name
-        self._jsonl_path = self._log_dir / jsonl_log_name
-        
-        self._jsonl_file = open(
-            self._jsonl_path, 'a', buffering=1, encoding='utf-8'
-        )
-        
+        self._metrics_path = self._run_dir / 'metrics.jsonl'
+        self._eval_path = self._run_dir / 'eval_curve.json'
+        self._metrics_file = open(self._metrics_path, 'a', buffering=1, encoding='utf-8')
         self._start_time = time.time()
+        self.steps, self.scores = [], []
         
-        self.steps = []
-        self.scores = []
+    @property
+    def run_dir(self) -> Path:
+        return self._run_dir
         
     def log(
         self,
@@ -50,7 +46,7 @@ class JSONLLogger:
                 record[tag] = scalar
         
         if len(record) > 2:
-            self._jsonl_file.write(json.dumps(record) + '\n')
+            self._metrics_path.write(json.dumps(record) + '\n')
             
     def log_print(
         self,
@@ -74,19 +70,17 @@ class JSONLLogger:
         self.scores.append(score)
 
     def save_config(self, config_dict: dict) -> None:
-        path = self._log_dir / 'config.json'
-        with open(path, 'w', encoding='utf-8') as f:
+        config_dict = {'run_tag': self.run_tag, **config_dict}
+        with open(self._run_dir / 'config.json', 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, indent=2, default=str)
 
     def close(self) -> None:
-        res = {
-            'Steps': self.steps,
-            'Score': self.scores
-        }
-        with open(self._json_log_path, 'w', encoding='utf-8') as f:
-            f.write(json.dumps(res))
-        
-        self._jsonl_file.close()
+        with open(self._eval_path, 'w', encoding='utf-8') as f:
+            json.dump(
+                {'run_tag': self.run_tag, 'steps': self.steps, 'scores': self.scores},
+                f
+            )
+        self._metrics_file.close()
 
 def _to_scalar(v: Any) -> float | int | None:
     if isinstance(v, (int, float)):

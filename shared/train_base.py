@@ -46,6 +46,11 @@ class TrainerConfig(BaseConfig):
     # --- schedule ---
     total_env_steps: int = 1_000_000
     warmup_steps: int = 5_000   # only for off-policy (prefill)
+    
+    # --- off-policy ---
+    buffer_capacity: int = 1_000_000
+    batch_size: int = 256
+    updates_per_step: int = 1
 
     # --- eval / log / save ---
     eval_interval: int = 10_000

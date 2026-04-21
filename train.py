@@ -1,5 +1,7 @@
 import argparse
 import importlib
+from pathlib import Path
+
 import torch
 
 from agents import build_agent
@@ -72,6 +74,13 @@ def build_configs(args):
     return agent_cfg, env_cfg, trainer_cfg
 
 def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
+    # --- paths ---
+    task_safe = args.task.replace(':', '_')
+    run_dir = Path(trainer_cfg.save_dir) / args.agent / task_safe / f'seed_{args.seed}'
+    run_dir.mkdir(parents=True, exist_ok=True)
+    
+    trainer_cfg = trainer_cfg.override(save_dir=str(run_dir))
+    
     # --- build env ---
     vec_env = make_vec_env(args.task, args.num_envs, env_cfg)
     eval_env = make_env(args.task, env_cfg)
@@ -87,13 +96,14 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     if args.train_type == 'off_policy':
         buffer = ReplayBuffer(
             obs_dim, act_dim,
-            capacity=1_000_000, device=device
+            capacity=trainer_cfg.buffer_capacity,
+            device=device
         )
     else:
         raise NotImplementedError
     
     # --- build logger ---
-    logger = JSONLLogger(trainer_cfg.save_dir, args)
+    logger = JSONLLogger(run_dir, args.agent, args.task, args.seed)
     logger.save_config({
         'agent_cfg': agent_cfg.to_dict(),
         'env_cfg': env_cfg.__dict__,
@@ -105,7 +115,9 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
         trainer = OffPolicyTrainer(
             agent=agent, vec_env=vec_env, eval_env=eval_env,
             logger=logger, config=trainer_cfg, device=device,
-            buffer=buffer
+            buffer=buffer,
+            batch_size=trainer_cfg.batch_size,
+            updates_per_step=trainer_cfg.updates_per_step
         )
     else:
         raise NotImplementedError
