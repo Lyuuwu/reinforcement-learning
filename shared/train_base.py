@@ -53,7 +53,7 @@ class TrainerConfig(BaseConfig):
     updates_per_step: int = 1
 
     # --- eval / log / save ---
-    eval_interval: int = 10_000
+    eval_interval: int = 5000
     eval_episodes: int = 10
     log_interval: int = 5000
     save_interval: int = 100_000
