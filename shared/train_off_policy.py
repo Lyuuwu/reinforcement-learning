@@ -46,11 +46,15 @@ class OffPolicyTrainer(TrainerBase):
 
             # --- eval / save ---
             if self.global_env_step % cfg.eval_interval < self.num_envs:
-                m = self.evaluate()
-                self.logger.log_print(m, step=self.global_env_step, prefix='eval')
+                self.logger.log_print(self.evaluate(),
+                                      step=self.global_env_step, prefix='eval')
 
             if self.global_env_step % cfg.save_interval < self.num_envs:
                 self._save_checkpoint(tag='latest', include_buffer=False)
+        
+        # final eval
+        self.logger.log_print(self.evaluate(),
+                              step=self.global_env_step, prefix='eval')
 
     def _prefill(self):
         cfg = self.config

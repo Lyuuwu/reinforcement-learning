@@ -28,7 +28,6 @@ def plot_comparison(root: str, agents: list[str], task: str, ax=None):
         steps = np.array(runs[0]['steps'])
         scores = np.array([r['scores'] for r in runs])
         mean, std = scores.mean(axis=0), scores.std(axis=0)
-        print(mean, std)
         ax.plot(steps, mean, label=agent)
         ax.fill_between(steps, mean - std, mean + std, alpha=0.2)
     

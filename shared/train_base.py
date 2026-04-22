@@ -113,6 +113,7 @@ class TrainerBase(ABC):
             print(f'[Trainer] Fresh start, seed={self.config.seed}')
         
         self.agent.train()
+        self._log_vram('after setup')
  
     def evaluate(self) -> dict[str, float]:
         self.agent.eval()
@@ -135,7 +136,23 @@ class TrainerBase(ABC):
         
         mean, std = float(np.mean(returns)), float(np.std(returns))
         self.logger.eval_log(self.global_env_step, mean)
-        return {'eval/return_mean': mean, 'eval/return_std': std}
+        return {'return_mean': mean, 'return_std': std}
+
+    def _log_vram(self, tag: str = '') -> None:
+        if not torch.cuda.is_available():
+            return
+        GB = 1024 ** 3
+        alloc = torch.cuda.memory_allocated(self.device) / GB
+        reserved = torch.cuda.memory_reserved(self.device) / GB
+        print(f'[VRAM{" " + tag if tag else ""}] allocated={alloc:.2f}GB  reserved={reserved:.2f}GB')
+        
+    def _log_vram_peak(self, tag: str = '') -> None:
+        if not torch.cuda.is_available():
+            return
+        GB = 1024 ** 3
+        max_a = torch.cuda.max_memory_allocated(self.device) / GB
+        max_r = torch.cuda.max_memory_reserved(self.device) / GB
+        print(f'[VRAM{" " + tag if tag else ""}] max allocated={max_a:.2f}GB  max reserved={max_r:.2f}GB')
 
     def _finalize(self) -> None:
         self._save_checkpoint(tag='final', include_buffer=self.config.save_buffer)

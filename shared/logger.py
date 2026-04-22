@@ -45,8 +45,7 @@ class JSONLLogger:
             if scalar is not None:
                 record[tag] = scalar
         
-        if len(record) > 2:
-            self._metrics_path.write(json.dumps(record) + '\n')
+        self._metrics_file.write(json.dumps(record) + '\n')
             
     def log_print(
         self,

@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--device', type=str, default='auto',
                    help='"auto", "cpu", "cuda", "cuda:0"')
     
-    p.add_argument('--save_dir', default='runs/default')
+    p.add_argument('--save_dir', default='runs/')
     
     p.add_argument('--resume', type=str, default=None,
                    help='Path to checkpoint .pt file, "auto" or path')
@@ -151,12 +151,16 @@ def main():
     print(f'   Params:  {param_count}')
     print('=' * 60)
     
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats(device)
+    
     try:
         components['trainer'].run()
     except KeyboardInterrupt:
         print('\n[Interrupted]')
         components['trainer']._save_checkpoint(tag='interrupted')
     finally:
+        components['trainer']._log_vram_peak()
         components['vec_env'].close()
         components['eval_env'].close()
 
