@@ -14,14 +14,15 @@ def load_runs(root: str, agent: str, task: str) -> list[dict]:
     for seed_dir in sorted(base.iterdir()):
         if not seed_dir.is_dir():
             continue
-        # 過濾 eval curve 檔 (排除 metrics.jsonl 與 config.json)
+        # 只保留 eval 結果的 json 檔案
         candidates = [p for p in seed_dir.iterdir()
                       if p.suffix == '.json'
                       and 'metrics' not in p.name
                       and 'config'  not in p.name]
         if not candidates:
             continue
-        # 檔名含 %Y-%m-%d_%H-%M, 字典序 = 時間序
+        
+        # 抓時間最新的
         latest = max(candidates, key=lambda p: p.name)
         with open(latest) as f:
             runs.append(json.load(f))
