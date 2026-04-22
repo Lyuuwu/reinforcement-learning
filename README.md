@@ -1,6 +1,6 @@
 # CILAB RL
 
-## usage
+## usage (one process)
 
 > python train.py --agent <agent_name> --task <{domain_name}:{task_name}>
 
@@ -9,7 +9,15 @@
 - agent: agents 底下資料夾的名稱，一定要相同
 - task: `{domain_name}:{task_name}` 如: `mujoco:Ant` 或是 `dm_conrol:cheetah-run` (注意大小寫)
 
-### optional flags
+## usage (multi process)
+
+> python run_parallel.py --agent <agent_name> --task<{domain_name}:{task_name}> --n <process_num>
+
+### format
+
+- n: process 的數量 (預設 1)
+
+### optional flags (train.py)
 
 - train_type: 預設 off-policy
 - config: 實驗檔案的配置，輸入名稱，程式會抓取 experiments/{name}.py 中的 build() 來建構 config
@@ -23,19 +31,26 @@
 - env-override: 修改 env config 的參數
 - trainer-override: 修改 trainer config 的參數
 
+### optional flags (run_parallel.py)
+
+- start-seed: 開始的 seed (預設 0)
+- save_dir: 存檔 root 資料夾 (預設 runs/)
+- "--" 後能夠設定 train.py 的 optional flags
+如: `python run_parallel.py --agent TQC --task mujoco:HalfCheetah --n 5 -- --agent-override gamma=0.95 beta=0.01`
+
 ## Add Agent
 
 在 agents 資料夾底下新增資料夾，名稱為 agent 的名稱
 
 檔案只要求一定要有 `__init__.py`
 
-封裝好的 agent 一定要繼承 `base.AgentBase`
-建構 agent 的程式要回傳 `base.AgentBase` 的類別的 class
-設定 Agent 參數用一個 `dataclass` 封裝，並且一定要繼承 `base.BaseConfig`
+- 封裝好的 agent 一定要繼承 `base.AgentBase`
+- 建構 agent 的程式要回傳 `base.AgentBase` 的類別的 class
+- 設定 Agent 參數用一個 `dataclass` 封裝，並且一定要繼承 `base.BaseConfig`
 
 ### AgentBase
 
-你要 override 以下的 method
+必須 override 以下的 method
 
 1. sample(self, obs): 回傳 action (for train)
 2. act(self, obs):    回傳 action (for eval)
@@ -50,10 +65,11 @@
 
 ### `__init__.py` 內容
 
-將 agent config import 進來，並且命名為 `Config`
-將 建構 agent 的 function import 進來，並且命名為 `build`
+- 將 agent config import 進來，並且命名為 `Config`
+- 將 建構 agent 的 function import 進來，並且命名為 `build`
+接收參數 `(obs_dim: int, act_dim: int, max_act: float, config: {agent_config})`
 
-然後加入 `__all__`
+然後加入 `__all__` (注意大小寫)
 
 範例:
 
@@ -67,9 +83,27 @@ __all__ = ['Config', 'build']
 
 ## Logger 存檔
 
-目前一坨，很亂，之後再改
+目前存檔的路徑:
+
+> save_dir / [agent_name] / [agent_name][task_name] / [agent][task_name][seed]
+
+在這資料夾中存
+
+- `[agent_name][task_name][seed][exe_time].json`
+- `[agent_name][task_name][seed][exe_time]metrics.jsonl`
+- `[agent_name][task_name][seed][exe_time]config.json`
+
+## Plot
+
+目前一坨
+
+`shared/plot_utils.py` 提供
+
+- `load_runs(root, agent, task)` : `[agent_name][task_name][seed]` 最新的檔案 (打包成 dict)
+- `plot_comparison(root, agents, task)` : 提供把多個 agents 跟 單一 task 的 eval_return 畫成圖
+
+之後看怎麼擴充
 
 ## 未來工作
 
-- 寫一個 .sh 或是 .py 的腳本進行多 process 的執行
-- 修改 Logger 的儲存方式，以及寫一個好用的畫圖程式
+- 寫一個好用的畫圖程式
