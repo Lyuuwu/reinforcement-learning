@@ -81,7 +81,7 @@ class JSONLLogger:
     def close(self) -> None:
         with open(self._eval_path, 'w', encoding='utf-8') as f:
             json.dump(
-                {'run_tag': self.run_tag, 'steps': self.steps, 'scores': self.scores},
+                {'run_tag': self.run_tag, 'Steps': self.steps, 'Score': self.scores},
                 f
             )
         self._metrics_file.close()
