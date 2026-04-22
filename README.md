@@ -1,5 +1,13 @@
 # CILAB RL
 
+## first step
+
+> pip install -e .
+
+安裝專案的 package
+
+然後要裝 pytorch 跟 matplotlib (目前沒其他的，所以沒寫 requirements.txt)
+
 ## usage (one process)
 
 > python train.py --agent <agent_name> --task <{domain_name}:{task_name}>
