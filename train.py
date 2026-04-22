@@ -76,7 +76,7 @@ def build_configs(args):
 def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     # --- paths ---
     task_safe = args.task.replace(':', '_')
-    run_dir = Path(trainer_cfg.save_dir) / args.agent / task_safe / f'seed_{args.seed}'
+    run_dir = Path(trainer_cfg.save_dir) / f'[{args.agent}]' / f'[{args.agent}][{task_safe}]' / f'[{args.agent}][{task_safe}][{args.seed}]'
     run_dir.mkdir(parents=True, exist_ok=True)
     
     trainer_cfg = trainer_cfg.override(save_dir=str(run_dir))

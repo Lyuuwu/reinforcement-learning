@@ -6,14 +6,25 @@ import matplotlib.pyplot as plt
 
 def load_runs(root: str, agent: str, task: str) -> list[dict]:
     task_safe = task.replace(':', '_')
-    base = Path(root) / agent / task_safe
-    runs = []
+    base = Path(root) / f'[{agent}]' / f'[{agent}][{task_safe}]'
+    if not base.exists():
+        return []
     
-    for seed_dir in sorted(base.glob('seed_*')):
-        path = seed_dir / 'eval_curve.json'
-        if path.exists():
-            with open(path) as f:
-                runs.append(json.load(f))
+    runs = []
+    for seed_dir in sorted(base.iterdir()):
+        if not seed_dir.is_dir():
+            continue
+        # 過濾 eval curve 檔 (排除 metrics.jsonl 與 config.json)
+        candidates = [p for p in seed_dir.iterdir()
+                      if p.suffix == '.json'
+                      and 'metrics' not in p.name
+                      and 'config'  not in p.name]
+        if not candidates:
+            continue
+        # 檔名含 %Y-%m-%d_%H-%M, 字典序 = 時間序
+        latest = max(candidates, key=lambda p: p.name)
+        with open(latest) as f:
+            runs.append(json.load(f))
     
     return runs
 

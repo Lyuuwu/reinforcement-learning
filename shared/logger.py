@@ -14,12 +14,17 @@ class JSONLLogger:
         self._run_dir = Path(run_dir)
         self._run_dir.mkdir(parents=True, exist_ok=True)
         
+        task_safe = task.replace(':', '_')
         t = datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
         uid = ''.join(random.choices(string.ascii_uppercase, k=6))
-        self.run_tag = f'[{agent}][{task}][{seed}][{t}][Logger][{uid}]'
         
-        self._metrics_path = self._run_dir / 'metrics.jsonl'
-        self._eval_path = self._run_dir / 'eval_curve.json'
+        self._basename = f'[{agent}][{task_safe}][{seed}][{t}]'
+        self.run_tag   = f'{self._basename}[Logger][{uid}]'
+        
+        self._metrics_path = self._run_dir / f'{self._basename}metrics.jsonl'
+        self._eval_path    = self._run_dir / f'{self._basename}.json'
+        self._config_path  = self._run_dir / f'{self._basename}config.json'
+        
         self._metrics_file = open(self._metrics_path, 'a', buffering=1, encoding='utf-8')
         self._start_time = time.time()
         self.steps, self.scores = [], []
@@ -70,7 +75,7 @@ class JSONLLogger:
 
     def save_config(self, config_dict: dict) -> None:
         config_dict = {'run_tag': self.run_tag, **config_dict}
-        with open(self._run_dir / 'config.json', 'w', encoding='utf-8') as f:
+        with open(self._config_path, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, indent=2, default=str)
 
     def close(self) -> None:
