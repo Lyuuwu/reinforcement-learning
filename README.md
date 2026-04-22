@@ -1,12 +1,14 @@
 # CILAB RL
 
-## first step
+## initialization
+
+> pip install -r requirements.txt
+
+安裝專案需要的 package (pytorch 自己裝)
 
 > pip install -e .
 
 安裝專案的 package
-
-然後要裝 pytorch 跟 matplotlib (目前沒其他的，所以沒寫 requirements.txt)
 
 ## usage (one process)
 
