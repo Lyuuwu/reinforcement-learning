@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from shared.mlp import MLPHead
+from shared.networks.mlp import MLPHead
 
 class Critic(nn.Module):
     '''

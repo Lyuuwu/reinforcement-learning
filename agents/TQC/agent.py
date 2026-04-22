@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from shared.base import AgentBase
 from .config import TQCConfig
 from .critic import Critic
-from shared.actors import GaussianActor
-from shared.ema import EMA
+from shared.networks.actors import GaussianActor
+from shared.networks.ema import EMA
 
 class TQC(AgentBase):
     def __init__(

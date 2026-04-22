@@ -1,4 +1,4 @@
-from shared.actors import GaussianActor
+from shared.networks.actors import GaussianActor
 from .critic import Critic
 
 from .agent import TQC
