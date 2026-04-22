@@ -18,7 +18,7 @@ class JSONLLogger:
         t = datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
         uid = ''.join(random.choices(string.ascii_uppercase, k=6))
         
-        self._basename = f'[{agent}][{task_safe}][{seed}][{t}]'
+        self._basename = f'[{agent}][{task_safe}][{seed}][{t}][{uid}]'
         self.run_tag   = f'{self._basename}[Logger][{uid}]'
         
         self._metrics_path = self._run_dir / f'{self._basename}metrics.jsonl'
