@@ -1,3 +1,4 @@
+import collections
 import itertools
 from typing import List
 
@@ -41,7 +42,8 @@ class TQC(AgentBase):
         # --- scales ---
         self.N = config.critic_num
         self.M = config.atom_num
-        self.k = self.M - config.dropped
+        self.kN = (self.M - config.dropped) * self.N
+        self.beta = config.beta
         self.gamma = config.gamma
         self.register_buffer(
             'tau',
@@ -50,6 +52,9 @@ class TQC(AgentBase):
                 dtype=torch.float32
             ).view(1, -1, 1)
         )
+        
+        # --- log ---
+        self._pending = collections.defaultdict(list)
 
     def sample(self, obs):
         ''' return action (B, act_dim) , log_prob (B, ) '''
@@ -67,21 +72,22 @@ class TQC(AgentBase):
         
         # --- alpha ---
         alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
-        metrics['alpha/loss'] = alpha_loss.item()
+        self._pending['alpha/loss'].append(alpha_loss.detach())
         
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
         
-        self.alpha = self.log_alpha.exp().item()
+        self.alpha = self.log_alpha.exp()
+        self._pending['alpha'].append(self.alpha.detach())
 
-        # --- Policy Loss ---
+        # --- Actor Loss ---
         atoms = self._get_atoms(batch['obs'], actions, self.critics)
-        policy_loss = self._policy_loss(log_probs, atoms)
-        metrics['policy/loss'] = policy_loss.item()
+        actor_loss = self._actor_loss(log_probs, atoms)
+        self._pending['actor/loss'].append(actor_loss.detach())
         
         self.actor_optimizer.zero_grad()
-        policy_loss.backward()
+        actor_loss.backward()
         self.actor_optimizer.step()
         
         # --- Critic Loss ---
@@ -90,43 +96,24 @@ class TQC(AgentBase):
             
             ema_atoms = self._get_atoms(batch['next_obs'], next_actions, self.ema_critics)
             ema_atoms_flat, _ = ema_atoms.flatten(1).sort(dim=-1)   # (B, NM)
-            ema_atoms_truncated = ema_atoms_flat[..., :self.k * self.N]   # (B, kN)
+            ema_atoms_truncated = ema_atoms_flat[..., :self.kN]   # (B, kN)
             
             y = batch['reward'] + self.gamma * (ema_atoms_truncated - self.alpha * log_probs.unsqueeze(-1)) * batch['not_done']
 
         atoms = self._get_atoms(batch['obs'], batch['action'], self.critics)    # (B, NM)
         critic_loss = self._critic_loss(y, atoms).mean()
-        metrics['critics/loss'] = critic_loss.item()
+        self._pending['critic_loss'].append(critic_loss.detach())
         
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
         
         # --- Target Network ---
-        for critic, ema_critic in zip(self.critics, self.ema_critics):
-            ema_critic.update(critic)
+        self._ema_update()
         
         return metrics
 
-    def _critic_loss(self, y: torch.Tensor, atoms: torch.Tensor) -> torch.Tensor:
-        '''
-        y:      (B, kN)
-        
-        atoms:  (B, N, M)
-        '''
-        
-        total_loss = 0
-        for n in range(self.N):
-            atoms_n = atoms[:, n, :]    # (B, M)
-            # y.unsqueeze(1)        (B, 1, kN)
-            # atoms_n.unsqueeze(2)  (B, M, 1)
-            u = y.unsqueeze(1) - atoms_n.unsqueeze(2)
-            loss = self._quantile_huber_loss(self.tau, u)
-            total_loss += loss.sum(dim=(-2, -1))    # (B, )
-        
-        return total_loss / (self.k * self.N * self.M)    # (B, )
-    
-    def _policy_loss(self, log_probs: torch.Tensor, atoms: torch.Tensor):
+    def _actor_loss(self, log_probs: torch.Tensor, atoms: torch.Tensor):
         '''
         log_probs:  (B, )
         
@@ -135,10 +122,46 @@ class TQC(AgentBase):
         
         return (self.alpha * log_probs - atoms.mean(dim=(-2, -1))).mean()
 
+    def _critic_loss(self, y: torch.Tensor, atoms: torch.Tensor) -> torch.Tensor:
+        '''
+        y:      (B, kN)
+        
+        atoms:  (B, N, M)
+        
+        return (B, )
+        '''
+        
+        #   y.unsqueeze(1).unsqueeze(1) -> (B, 1, 1, kN)
+        #   atoms.unsqueeze(-1)         -> (B, N, M, 1)
+        #   broadcast                   -> (B, N, M, kN)
+        u = y.unsqueeze(1).unsqueeze(1) - atoms.unsqueeze(-1)
+        
+        loss = self._quantile_huber_loss(self.tau, u)
+        total_loss = loss.sum(dim=(-3, -2, -1)) # (B, )
+        
+        return total_loss / (self.kN * self.M)
+
     def _get_atoms(self, obs, act, critics) -> torch.Tensor:
         tensors = [critic(obs, act) for critic in critics]  # List 長度為 N, 每個元素 (B, M)
         return torch.stack(tensors, dim=1)  # (B, N, M)
         
     def _quantile_huber_loss(self, tau: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
-        huber = F.huber_loss(u, torch.zeros_like(u), reduction='none', delta=1.0)
-        return (tau - (u<0).float()).abs() * huber
+        abs_u = u.abs()
+        huber = torch.where(abs_u > 1.0, abs_u - 0.5, 0.5 * u * u)
+        indicator = (u.detach() < 0).to(u.dtype)
+        weight = (tau - indicator).abs()
+        return weight * huber
+
+    @torch.no_grad()
+    def _ema_update(self) -> None:
+        # lazy cache
+        if not hasattr(self, '_ema_src'):
+            src, tgt = [], []
+            for critic, ema in zip(self.critics, self.ema_critics):
+                src.extend(critic.parameters())
+                tgt.extend(ema.ema_model.parameters())
+            
+            self._ema_src = src
+            self._ema_tgt = tgt
+        
+        torch._foreach_lerp_(self._ema_tgt, self._ema_src, self.beta)
