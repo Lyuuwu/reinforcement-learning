@@ -182,6 +182,6 @@ def make_vec_env(
     env_fns = [partial(thunk, i) for i in range(num_envs)]
     
     if async_mode and num_envs > 1:
-        return gym.vector.AsyncVectorEnv(env_fns)
+        return gym.vector.AsyncVectorEnv(env_fns, autoreset_mode=gym.vector.AutoresetMode.SAME_STEP)
 
-    return gym.vector.SyncVectorEnv(env_fns)
+    return gym.vector.SyncVectorEnv(env_fns, autoreset_mode=gym.vector.AutoresetMode.SAME_STEP)

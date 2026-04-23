@@ -25,10 +25,11 @@ class OffPolicyTrainer(TrainerBase):
                 action, _ = self.agent.sample(obs_t)
                 action = action.cpu().numpy()
 
-            next_obs, r, term, trun, _ = self.vec_env.step(action)
-
+            next_obs, r, term, trun, info = self.vec_env.step(action)
+            
             for i in range(self.num_envs):
-                self.buffer.push(obs[i], action[i], r[i], next_obs[i], bool(term[i]))
+                actual_next_obs = info['final_obs'][i] if (term[i] or trun[i]) else next_obs[i]
+                self.buffer.push(obs[i], action[i], r[i], actual_next_obs, bool(term[i]))
 
             obs = next_obs
             self.global_env_step += self.num_envs
