@@ -61,7 +61,7 @@ class OffPolicyTrainer(TrainerBase):
     def _prefill(self):
         cfg = self.config
         need = max(cfg.warmup_steps - self.global_env_step, 0)
-        obs, _ = self.vec_env.reset()
+        obs, _ = self.vec_env.reset(seed=self.config.seed)
         
         if need == 0:
             print(f'[Prefill] warmup already satisfied (step={self.global_env_step})',
