@@ -1,5 +1,3 @@
-import tracemalloc, gc
-
 import numpy as np
 import torch
 
@@ -16,7 +14,6 @@ class OffPolicyTrainer(TrainerBase):
         self.updates_per_step = updates_per_step
 
     def _main_loop(self) -> None:
-        tracemalloc.start()
         
         # obs, _ = self.vec_env.reset(seed=self.config.seed)
         obs = self._prefill()
@@ -56,15 +53,6 @@ class OffPolicyTrainer(TrainerBase):
 
             if self.global_env_step % cfg.save_interval < self.num_envs:
                 self._save_checkpoint(tag='latest', include_buffer=False)
-                
-            if self.global_env_step % 10_000 == 0:
-                print('=' * 60)
-                print('snapshot')
-                snapshot = tracemalloc.take_snapshot()
-                top = snapshot.statistics('lineno')[:5]
-                for stat in top:
-                    print(stat)
-                gc.collect()
         
         # final eval
         self.logger.log_print(self.evaluate(),
