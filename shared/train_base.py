@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
 import numpy as np
 import torch
@@ -48,6 +48,7 @@ class TrainerConfig(BaseConfig):
     warmup_steps: int = 5_000   # only for off-policy (prefill)
     
     # --- off-policy ---
+    buffer_type: Literal['cpu', 'gpu'] = 'cpu'
     buffer_capacity: int = 1_000_000
     batch_size: int = 256
     updates_per_step: int = 1

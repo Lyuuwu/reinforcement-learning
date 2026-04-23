@@ -2,10 +2,10 @@ import numpy as np
 import torch
 
 from .train_base import TrainerBase
-from .buffers import ReplayBuffer
+from .buffers import BufferBase
 
 class OffPolicyTrainer(TrainerBase):
-    def __init__(self, *args, buffer: ReplayBuffer,
+    def __init__(self, *args, buffer: BufferBase,
                  batch_size: int = 256,
                  updates_per_step: int = 1, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,23 +102,5 @@ class OffPolicyTrainer(TrainerBase):
         self.agent.critic_optimizer.load_state_dict(state['critic'])
         self.agent.alpha_optimizer.load_state_dict(state['alpha'])
 
-    def _get_buffer_state(self) -> dict:
-        return {
-            'obs': self.buffer.obs[:len(self.buffer)],
-            'action': self.buffer.action[:len(self.buffer)],
-            'reward': self.buffer.reward[:len(self.buffer)],
-            'next_obs': self.buffer.next_obs[:len(self.buffer)],
-            'not_done': self.buffer.not_done[:len(self.buffer)],
-            'ptr': self.buffer._ptr,
-            'size': self.buffer._size,
-        }
-
-    def _load_buffer_state(self, state: dict) -> None:
-        n = state['size']
-        self.buffer.obs[:n] = state['obs']
-        self.buffer.action[:n] = state['action']
-        self.buffer.reward[:n] = state['reward']
-        self.buffer.next_obs[:n] = state['next_obs']
-        self.buffer.not_done[:n] = state['not_done']
-        self.buffer._ptr = state['ptr']
-        self.buffer._size = state['size']
+    def _get_buffer_state(self):  return self.buffer.state_dict()
+    def _load_buffer_state(self, state): self.buffer.load_state_dict(state)

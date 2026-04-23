@@ -8,7 +8,6 @@ from agents import build_agent
 from envs import EnvConfig, make_vec_env, make_env
 from shared.train_base import TrainerConfig
 from shared.train_off_policy import OffPolicyTrainer
-from shared.buffers import ReplayBuffer
 from shared.logger import JSONLLogger
 
 def parse_args() -> argparse.Namespace:
@@ -94,8 +93,10 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     
     # --- build buffer ---
     if args.train_type == 'off_policy':
-        buffer = ReplayBuffer(
-            obs_dim, act_dim,
+        from shared.buffers import build_buffer
+        buffer = build_buffer(
+            kind=trainer_cfg.buffer_type,
+            obs_dim=obs_dim, action_dim=act_dim,
             capacity=trainer_cfg.buffer_capacity,
             device=device,
             batch_size=trainer_cfg.batch_size
