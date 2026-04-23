@@ -67,7 +67,7 @@ class TQC(AgentBase):
         
         # --- alpha ---
         alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
-        metrics['alpha/loss'] = alpha_loss
+        metrics['alpha/loss'] = alpha_loss.item()
         
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
@@ -78,7 +78,7 @@ class TQC(AgentBase):
         # --- Policy Loss ---
         atoms = self._get_atoms(batch['obs'], actions, self.critics)
         policy_loss = self._policy_loss(log_probs, atoms)
-        metrics['policy/loss'] = policy_loss
+        metrics['policy/loss'] = policy_loss.item()
         
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
@@ -96,7 +96,7 @@ class TQC(AgentBase):
 
         atoms = self._get_atoms(batch['obs'], batch['action'], self.critics)    # (B, NM)
         critic_loss = self._critic_loss(y, atoms).mean()
-        metrics['critics/loss'] = critic_loss
+        metrics['critics/loss'] = critic_loss.item()
         
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
