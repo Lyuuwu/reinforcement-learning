@@ -41,10 +41,11 @@ class OffPolicyTrainer(TrainerBase):
             # --- 更新參數 ---
             if len(self.buffer) >= self.batch_size:
                 for _ in range(self.updates_per_step):
-                    metrics = self.agent.update(self.buffer.sample(self.batch_size))
+                    self.agent.update(self.buffer.sample(self.batch_size))
                     self.global_update_step += 1
 
                 if self.global_env_step % cfg.log_interval < self.num_envs:
+                    metrics = self.agent.flush_metrics()
                     self.logger.log_print(metrics, step=self.global_env_step,
                                           prefix='train')
 

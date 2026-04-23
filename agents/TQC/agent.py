@@ -28,7 +28,7 @@ class TQC(AgentBase):
         
         # --- alpha ---
         self.log_alpha = nn.Parameter(torch.zeros(1))
-        self.alpha = self.log_alpha.exp().item()
+        self.alpha = self.log_alpha.exp()
         self.target_entropy = -self.actor.act_dim
         
         # --- optimizers ---
@@ -64,7 +64,7 @@ class TQC(AgentBase):
     def act(self, obs):
         return self.actor.act(obs)
     
-    def update(self, batch) -> dict:
+    def update(self, batch) -> None:
         metrics = {}
 
         # --- Policy Select Action ---
@@ -72,19 +72,20 @@ class TQC(AgentBase):
         
         # --- alpha ---
         alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
-        self._pending['alpha/loss'].append(alpha_loss.detach())
+        self._stash('alpha/loss', alpha_loss)
         
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
         
         self.alpha = self.log_alpha.exp()
-        self._pending['alpha'].append(self.alpha.detach())
+        self._stash('alpha', self.alpha)
 
         # --- Actor Loss ---
         atoms = self._get_atoms(batch['obs'], actions, self.critics)
         actor_loss = self._actor_loss(log_probs, atoms)
-        self._pending['actor/loss'].append(actor_loss.detach())
+        self._pending
+        self._stash('actor/loss', actor_loss)
         
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -102,7 +103,7 @@ class TQC(AgentBase):
 
         atoms = self._get_atoms(batch['obs'], batch['action'], self.critics)    # (B, NM)
         critic_loss = self._critic_loss(y, atoms).mean()
-        self._pending['critic_loss'].append(critic_loss.detach())
+        self._stash('critic/loss', critic_loss)
         
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -110,8 +111,6 @@ class TQC(AgentBase):
         
         # --- Target Network ---
         self._ema_update()
-        
-        return metrics
 
     def _actor_loss(self, log_probs: torch.Tensor, atoms: torch.Tensor):
         '''

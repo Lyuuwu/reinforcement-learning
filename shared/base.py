@@ -1,4 +1,5 @@
 import copy
+import collections
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 
@@ -21,6 +22,11 @@ class BaseConfig:
         return c
     
 class AgentBase(nn.Module, ABC):
+    def __init__(self):
+        super().__init__()
+        
+        self._pending: dict[str, list[torch.Tensor]] = collections.defaultdict(list)
+    
     @abstractmethod
     def sample(self, obs):
         ''' stochastic for train '''
@@ -32,6 +38,21 @@ class AgentBase(nn.Module, ABC):
     @abstractmethod
     def update(self, batch) -> dict:
         ''' one gradient step '''
+    
+    def _stash(self, name: str, value: torch.Tensor) -> None:
+        self._pending[name].append(value.detach())
+    
+    def flush_metrics(self) -> dict[str, float]:
+        if not self._pending:
+            return {}
+        
+        names = list(self._pending.keys())
+        means = [torch.stack(self._pending[n]).mean() for n in names]
+        packed = torch.stack(means).cpu()
+        out = {n: packed[i].item() for i, n in enumerate(names)}
+        
+        self._pending.clear()
+        return out
     
     def save(self, path: str):
         torch.save(self.state_dict(), path)

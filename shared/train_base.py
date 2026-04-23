@@ -155,6 +155,9 @@ class TrainerBase(ABC):
         print(f'[VRAM{" " + tag if tag else ""}] max allocated={max_a:.2f}GB  max reserved={max_r:.2f}GB')
 
     def _finalize(self) -> None:
+        final_metrics = self.agent.flush_metrics()
+        if final_metrics:
+            self.logger.log(final_metrics, step=self.global_env_step, prefix='train')
         self._save_checkpoint(tag='final', include_buffer=self.config.save_buffer)
         self.logger.close()
 
