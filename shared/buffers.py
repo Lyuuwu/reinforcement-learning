@@ -30,7 +30,6 @@ class ReplayBuffer:
             'next_obs': np.empty((batch_size, obs_dim),    dtype=np.float32),
             'not_done': np.empty((batch_size, 1),          dtype=np.float32),
         }
-        self._idx_buf = np.empty(batch_size, dtype=np.int64)
         
     def push(
         self,
@@ -50,8 +49,7 @@ class ReplayBuffer:
         self._size = min(self._size + 1, self.cap)
         
     def sample(self, batch_size: int) -> dict[str, torch.Tensor]:
-        np.random.randint(0, self._size, size=batch_size, out=self._idx_buf)
-        idx = self._idx_buf
+        idx = np.random.randint(0, self._size, size=batch_size)
         
         np.take(self.obs,      idx, axis=0, out=self._batch['obs'])
         np.take(self.action,   idx, axis=0, out=self._batch['action'])
