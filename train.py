@@ -97,7 +97,8 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
         buffer = ReplayBuffer(
             obs_dim, act_dim,
             capacity=trainer_cfg.buffer_capacity,
-            device=device
+            device=device,
+            batch_size=trainer_cfg.batch_size
         )
     else:
         raise NotImplementedError
