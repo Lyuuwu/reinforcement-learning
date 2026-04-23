@@ -65,6 +65,10 @@
 1. sample(self, obs): 回傳 action (for train)
 2. act(self, obs):    回傳 action (for eval)
 3. update(self, batch): 輸入一個 batch 的資料，定義網路如何更新參數
+4. Agent 內紀錄 metrics 使用 `self._stash(name, value)`
+   - name: str
+   - value: torch.Tensor
+   - 每 `log_interval` 步，會把 buffer 的內容轉換成 `dict`，並取期間內的平均
 
 ### BaseConfig
 
