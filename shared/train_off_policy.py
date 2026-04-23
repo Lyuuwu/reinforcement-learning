@@ -14,8 +14,6 @@ class OffPolicyTrainer(TrainerBase):
         self.updates_per_step = updates_per_step
 
     def _main_loop(self) -> None:
-        
-        # obs, _ = self.vec_env.reset(seed=self.config.seed)
         obs = self._prefill()
         cfg = self.config
 
