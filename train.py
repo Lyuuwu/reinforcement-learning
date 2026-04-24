@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument('--train_type', type=str, default='off_policy',
                    help='select training procedure')
     
-    p.add_argument('--seed', type=int, default=0)
+    p.add_argument('--seed', type=int, default=1000)
     
     p.add_argument('--num_envs', type=int, default=1)
     

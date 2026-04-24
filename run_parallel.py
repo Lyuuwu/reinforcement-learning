@@ -10,7 +10,7 @@ def parse_args():
     p.add_argument('--agent', type=str, required=True)
     p.add_argument('--task', type=str, required=True)
     p.add_argument('--n', type=int, default=3, help='the number of process')
-    p.add_argument('--start-seed', type=int, default=0)
+    p.add_argument('--start-seed', type=int, default=1000)
     p.add_argument('--save_dir', default='runs/')
     
     p.add_argument('passthrough', nargs=argparse.REMAINDER)
