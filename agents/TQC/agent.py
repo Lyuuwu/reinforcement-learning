@@ -52,9 +52,6 @@ class TQC(AgentBase):
                 dtype=torch.float32
             ).view(1, -1, 1)
         )
-        
-        # --- log ---
-        self._pending = collections.defaultdict(list)
 
     def sample(self, obs):
         ''' return action (B, act_dim) , log_prob (B, ) '''
@@ -65,8 +62,6 @@ class TQC(AgentBase):
         return self.actor.act(obs)
     
     def update(self, batch) -> None:
-        metrics = {}
-
         # --- Policy Select Action ---
         actions, log_probs = self.sample(batch['obs'])
         
@@ -78,13 +73,12 @@ class TQC(AgentBase):
         alpha_loss.backward()
         self.alpha_optimizer.step()
         
-        self.alpha = self.log_alpha.exp()
+        self.alpha = self.log_alpha.exp().detach()
         self._stash('alpha', self.alpha)
 
         # --- Actor Loss ---
         atoms = self._get_atoms(batch['obs'], actions, self.critics)
         actor_loss = self._actor_loss(log_probs, atoms)
-        self._pending
         self._stash('actor/loss', actor_loss)
         
         self.actor_optimizer.zero_grad()
@@ -93,13 +87,13 @@ class TQC(AgentBase):
         
         # --- Critic Loss ---
         with torch.no_grad():
-            next_actions, log_probs = self.sample(batch['next_obs'])
+            next_actions, next_log_probs = self.sample(batch['next_obs'])
             
             ema_atoms = self._get_atoms(batch['next_obs'], next_actions, self.ema_critics)
             ema_atoms_flat, _ = ema_atoms.flatten(1).sort(dim=-1)   # (B, NM)
             ema_atoms_truncated = ema_atoms_flat[..., :self.kN]   # (B, kN)
             
-            y = batch['reward'] + self.gamma * (ema_atoms_truncated - self.alpha * log_probs.unsqueeze(-1)) * batch['not_done']
+            y = batch['reward'] + self.gamma * (ema_atoms_truncated - self.alpha * next_log_probs.unsqueeze(-1)) * batch['not_done']
 
         atoms = self._get_atoms(batch['obs'], batch['action'], self.critics)    # (B, NM)
         critic_loss = self._critic_loss(y, atoms).mean()

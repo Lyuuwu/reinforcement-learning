@@ -36,7 +36,7 @@ class AgentBase(nn.Module, ABC):
         ''' deterministic for eval '''
     
     @abstractmethod
-    def update(self, batch) -> dict:
+    def update(self, batch) -> None:
         ''' one gradient step '''
     
     def _stash(self, name: str, value: torch.Tensor) -> None:
