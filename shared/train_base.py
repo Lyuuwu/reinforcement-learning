@@ -110,7 +110,6 @@ class TrainerBase(ABC):
             self._resumed = True
             print(f'[Trainer] Resumed from {ckpt_path} @ sstep {self.global_env_step}')
         else:
-            seed_everything(self.config.seed)
             print(f'[Trainer] Fresh start, seed={self.config.seed}')
         
         self.agent.train()

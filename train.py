@@ -6,7 +6,7 @@ import torch
 
 from agents import build_agent
 from envs import EnvConfig, make_vec_env, make_env
-from shared.train_base import TrainerConfig
+from shared.train_base import TrainerConfig, seed_everything
 from shared.train_off_policy import OffPolicyTrainer
 from shared.logger import JSONLLogger
 
@@ -79,6 +79,9 @@ def compose(args, agent_cfg, env_cfg, trainer_cfg, device) -> dict:
     run_dir.mkdir(parents=True, exist_ok=True)
     
     trainer_cfg = trainer_cfg.override(save_dir=str(run_dir))
+    
+    # --- set seed ---
+    seed_everything(args.seed)
     
     # --- build env ---
     vec_env = make_vec_env(args.task, args.num_envs, env_cfg)
