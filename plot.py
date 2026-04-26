@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 
 from shared.plot_utils import plot_comparison
 
-dir_name = 'default'
-root = f'runs/{dir_name}'
+root = f'runs/'
 tasks = ['mujoco:HalfCheetah']
 agents = ['TQC']
 fig, axes = plt.subplots(1, len(tasks), figsize=(5*len(tasks), 4))
