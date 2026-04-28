@@ -5,6 +5,7 @@ from typing import Any, Callable, Literal
 
 import gymnasium as gym
 import numpy as np
+import shimmy
 
 from .wrappers import(
     ActionRepeat, PixelObservation

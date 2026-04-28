@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from shared.plot_utils import plot_comparison
 
 root = f'runs/'
-tasks = ['mujoco:HalfCheetah']
+tasks = ['mujoco:Ant']
 agents = ['TQC']
 fig, axes = plt.subplots(1, len(tasks), figsize=(5*len(tasks), 4))
 save_dir = None
